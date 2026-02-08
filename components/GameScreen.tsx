@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameMode, TurnState, GameResult, JudgeFeedback } from '../types';
+import { GameMode, TurnState, GameResult, JudgeFeedback, BeatOption } from '../types';
 import { getRandomRhymeGroup } from '../constants';
-import { Mic, MicOff, RefreshCw, Home, Gavel } from 'lucide-react';
+import { MicOff, RefreshCw, Home, Gavel } from 'lucide-react';
 import BarMeter from './BarMeter';
 import Visualizer from './Visualizer';
 import Bulldog from './Bulldog';
@@ -12,11 +12,12 @@ import { saveTranscript, updateTranscriptGrade } from '../services/supabase';
 
 interface GameScreenProps {
   mode: GameMode;
+  beat: BeatOption;
   onFinish: (result: GameResult) => void;
   onExit: () => void;
 }
 
-const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
+const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit }) => {
   const [turnState, setTurnState] = useState<TurnState>(TurnState.INTRO);
   const [currentWords, setCurrentWords] = useState<string[]>([]);
   
@@ -30,11 +31,20 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
 
   const [liveTranscript, setLiveTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [countdownValue, setCountdownValue] = useState<number | null>(null);
+  const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
   
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const countdownTimerRef = useRef<number | null>(null);
+  const recordTimerRef = useRef<number | null>(null);
+  const recordStopTimeoutRef = useRef<number | null>(null);
+  const activePlayerRef = useRef<1 | 2 | null>(null);
+
+  const COUNTDOWN_SECONDS = 3;
+  const RECORD_SECONDS = 20;
 
   const p1Color = mode === GameMode.BATTLE ? 'purple' : 'pink';
   const p2Color = mode === GameMode.BATTLE ? 'green' : 'cyan';
@@ -60,7 +70,10 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
     startP1Turn();
     
     return () => {
-      audioService.stopBeat(); // stop music on unmount
+      audioService.stopBeatTrack();
+      if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
+      if (recordTimerRef.current) window.clearInterval(recordTimerRef.current);
+      if (recordStopTimeoutRef.current) window.clearTimeout(recordStopTimeoutRef.current);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         try { mediaRecorderRef.current.stop(); } catch (e) { console.error(e); }
       }
@@ -68,6 +81,16 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    audioService.setBeatSource(beat.src);
+  }, [beat]);
+
+  useEffect(() => {
+    if (turnState === TurnState.P1_READY) startCountdown(1);
+    if (turnState === TurnState.P2_READY) startCountdown(2);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turnState]);
 
   const startAudioCapture = async () => {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') return;
@@ -143,12 +166,41 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
     audioService.playSnare();
   };
 
+  const clearTimers = () => {
+    if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
+    if (recordTimerRef.current) window.clearInterval(recordTimerRef.current);
+    if (recordStopTimeoutRef.current) window.clearTimeout(recordStopTimeoutRef.current);
+    countdownTimerRef.current = null;
+    recordTimerRef.current = null;
+    recordStopTimeoutRef.current = null;
+  };
+
+  const startCountdown = (player: 1 | 2) => {
+    clearTimers();
+    activePlayerRef.current = player;
+    setCountdownValue(COUNTDOWN_SECONDS);
+
+    let remaining = COUNTDOWN_SECONDS;
+    countdownTimerRef.current = window.setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+        setCountdownValue(null);
+        handleStartRecording(player);
+      } else {
+        setCountdownValue(remaining);
+      }
+    }, 1000);
+  };
+
   const handleStartRecording = async (player: 1 | 2) => {
     setLiveTranscript("");
     setIsListening(true);
+    setTimerRemaining(RECORD_SECONDS);
     await startAudioCapture();
     // Start music for player
-    audioService.startBeat(player === 1 ? 'classic' : 'trap');
+    audioService.startBeatTrack(20);
     audioService.playKick();
     
     if (recognitionRef.current) {
@@ -156,11 +208,30 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
     }
 
     setTurnState(player === 1 ? TurnState.P1_RECORDING : TurnState.P2_RECORDING);
+
+    let remaining = RECORD_SECONDS;
+    recordTimerRef.current = window.setInterval(() => {
+      remaining -= 1;
+      setTimerRemaining(remaining);
+      if (remaining <= 0 && recordTimerRef.current) {
+        window.clearInterval(recordTimerRef.current);
+        recordTimerRef.current = null;
+      }
+    }, 1000);
+
+    recordStopTimeoutRef.current = window.setTimeout(() => {
+      handleStopRecording(player);
+    }, RECORD_SECONDS * 1000);
   };
 
   const handleStopRecording = async (player: 1 | 2) => {
+    if (activePlayerRef.current !== player) return;
+    activePlayerRef.current = null;
+    clearTimers();
+    setCountdownValue(null);
+    setTimerRemaining(null);
     setIsListening(false);
-    audioService.stopBeat();
+    audioService.stopBeatTrack();
     audioService.playSnare();
     
     if (recognitionRef.current) {
@@ -259,16 +330,24 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
       
       case TurnState.P1_READY:
         return (
-          <button onClick={() => handleStartRecording(1)} className={`bg-${p1Color}-600 hover:bg-${p1Color}-500 text-white rounded-full p-8 transition-transform hover:scale-110 shadow-[0_0_30px_rgba(168,85,247,0.6)]`}>
-            <Mic size={48} /> <span className="block text-sm font-bold mt-2">P1 START</span>
-          </button>
+          <div className="flex flex-col items-center">
+            <div className="text-6xl font-bangers text-yellow-400 drop-shadow-lg animate-pulse">
+              {countdownValue ?? COUNTDOWN_SECONDS}
+            </div>
+            <div className="text-xs font-mono text-gray-400 mt-2">P1 STARTING</div>
+          </div>
         );
 
       case TurnState.P1_RECORDING:
         return (
-          <button onClick={() => handleStopRecording(1)} className="bg-red-600 hover:bg-red-500 text-white rounded-full p-6 animate-pulse shadow-[0_0_20px_red]">
-             <MicOff size={32} /> <span className="block text-xs font-bold mt-1">STOP</span>
-          </button>
+          <div className="flex flex-col items-center gap-3">
+            <div className="text-sm font-mono text-gray-300">
+              {timerRemaining !== null ? `${timerRemaining}s` : `${RECORD_SECONDS}s`}
+            </div>
+            <button onClick={() => handleStopRecording(1)} className="bg-red-600 hover:bg-red-500 text-white rounded-full p-6 animate-pulse shadow-[0_0_20px_red]">
+               <MicOff size={32} /> <span className="block text-xs font-bold mt-1">END EARLY</span>
+            </button>
+          </div>
         );
 
       case TurnState.P1_PROCESSING:
@@ -282,16 +361,24 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
 
       case TurnState.P2_READY:
         return (
-            <button onClick={() => handleStartRecording(2)} className={`bg-${p2Color}-600 hover:bg-${p2Color}-500 text-white rounded-full p-8 transition-transform hover:scale-110 shadow-[0_0_30px_rgba(34,197,94,0.6)]`}>
-              <Mic size={48} /> <span className="block text-sm font-bold mt-2">P2 START</span>
-            </button>
+            <div className="flex flex-col items-center">
+              <div className="text-6xl font-bangers text-yellow-400 drop-shadow-lg animate-pulse">
+                {countdownValue ?? COUNTDOWN_SECONDS}
+              </div>
+              <div className="text-xs font-mono text-gray-400 mt-2">P2 STARTING</div>
+            </div>
           );
   
       case TurnState.P2_RECORDING:
         return (
-           <button onClick={() => handleStopRecording(2)} className="bg-red-600 hover:bg-red-500 text-white rounded-full p-6 animate-pulse shadow-[0_0_20px_red]">
-              <MicOff size={32} /> <span className="block text-xs font-bold mt-1">STOP</span>
-           </button>
+           <div className="flex flex-col items-center gap-3">
+             <div className="text-sm font-mono text-gray-300">
+               {timerRemaining !== null ? `${timerRemaining}s` : `${RECORD_SECONDS}s`}
+             </div>
+             <button onClick={() => handleStopRecording(2)} className="bg-red-600 hover:bg-red-500 text-white rounded-full p-6 animate-pulse shadow-[0_0_20px_red]">
+                <MicOff size={32} /> <span className="block text-xs font-bold mt-1">END EARLY</span>
+             </button>
+           </div>
           );
       
       case TurnState.ROUND_END: // Acts as "JUDGING" state
@@ -317,7 +404,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, onFinish, onExit }) => {
 
         {/* Header */}
         <div className="z-10 w-full flex justify-between items-center p-4 bg-black/40 backdrop-blur-sm border-b border-white/10">
-            <button onClick={() => { audioService.stopBeat(); onExit(); }} className="text-gray-400 hover:text-white"><Home /></button>
+            <button onClick={() => { audioService.stopBeatTrack(); onExit(); }} className="text-gray-400 hover:text-white"><Home /></button>
             <h1 className={`font-graffiti text-2xl ${themeColor} drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]`}>
                 {mode === GameMode.BATTLE ? "STREET BATTLE" : "KILL 'EM W/ KINDNESS"}
             </h1>

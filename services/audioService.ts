@@ -3,6 +3,8 @@ class AudioService {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
   private beatTimer: number | null = null;
+  private beatAudio: HTMLAudioElement | null = null;
+  private beatSrc: string | null = null;
 
   constructor() {
     try {
@@ -15,6 +17,15 @@ class AudioService {
   private ensureContext() {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
+    }
+  }
+
+  setBeatSource(src: string) {
+    if (this.beatSrc === src) return;
+    this.beatSrc = src;
+    if (this.beatAudio) {
+      try { this.beatAudio.pause(); } catch (e) { console.warn(e); }
+      this.beatAudio = null;
     }
   }
 
@@ -46,25 +57,33 @@ class AudioService {
   playSnare() {
     if (!this.ctx || this.isMuted) return;
     this.ensureContext();
-    
-    // Noise buffer for snare
-    const bufferSize = this.ctx.sampleRate * 0.1; 
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-    }
 
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-    
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-    
-    noise.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
-    noise.start();
+    const now = this.ctx.currentTime;
+
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc2.type = 'square';
+
+    osc1.frequency.setValueAtTime(440, now);
+    osc1.frequency.exponentialRampToValueAtTime(880, now + 0.25);
+    osc2.frequency.setValueAtTime(220, now);
+    osc2.frequency.exponentialRampToValueAtTime(440, now + 0.25);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.4, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.6);
+    osc2.stop(now + 0.6);
   }
 
   playWin() {
@@ -114,6 +133,40 @@ class AudioService {
     if (this.beatTimer) {
       clearInterval(this.beatTimer);
       this.beatTimer = null;
+    }
+  }
+
+  startBeatTrack(startAtSeconds: number = 0) {
+    this.stopBeat();
+    if (this.isMuted || !this.beatSrc) return;
+
+    if (!this.beatAudio) {
+      this.beatAudio = new Audio(this.beatSrc);
+      this.beatAudio.loop = true;
+      this.beatAudio.volume = 0.6;
+    }
+
+    try {
+      const duration = this.beatAudio.duration || 0;
+      const safeStart = duration > 0 ? Math.min(Math.max(startAtSeconds, 0), Math.max(duration - 0.1, 0)) : Math.max(startAtSeconds, 0);
+      this.beatAudio.currentTime = safeStart;
+    } catch (e) {
+      console.warn(e);
+    }
+
+    this.beatAudio.play().catch((err) => {
+      console.warn("Beat track play failed:", err);
+    });
+  }
+
+  stopBeatTrack() {
+    this.stopBeat();
+    if (!this.beatAudio) return;
+    try {
+      this.beatAudio.pause();
+      this.beatAudio.currentTime = 0;
+    } catch (e) {
+      console.warn(e);
     }
   }
 }

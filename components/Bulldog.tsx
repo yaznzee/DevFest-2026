@@ -4,46 +4,39 @@ const Bulldog: React.FC = () => {
   return (
     <div className="w-48 h-48 md:w-64 md:h-64 relative animate-bounce-slow">
       <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
-        <g id="bulldog-head" className="origin-bottom animate-head-bop">
-          {/* Collar */}
-          <path d="M60 160 L140 160 L145 180 L55 180 Z" fill="#333" stroke="white" strokeWidth="2" />
-          <circle cx="70" cy="170" r="5" fill="#ccc" />
-          <circle cx="90" cy="170" r="5" fill="#ccc" />
-          <circle cx="110" cy="170" r="5" fill="#ccc" />
-          <circle cx="130" cy="170" r="5" fill="#ccc" />
-
-          {/* Head Base */}
-          <ellipse cx="100" cy="110" rx="60" ry="55" fill="#D2B48C" stroke="black" strokeWidth="3" />
-          
-          {/* Jowls */}
-          <path d="M60 130 Q100 170 140 130" fill="#C19A6B" stroke="black" strokeWidth="2" />
-          <path d="M80 130 Q100 150 120 130" fill="none" stroke="black" strokeWidth="2" />
-
-          {/* Nose */}
-          <ellipse cx="100" cy="115" rx="15" ry="10" fill="black" />
-          
-          {/* Eyes */}
-          <ellipse cx="75" cy="95" rx="12" ry="14" fill="white" stroke="black" />
-          <circle cx="75" cy="95" r="5" fill="black" />
-          
-          <ellipse cx="125" cy="95" rx="12" ry="14" fill="white" stroke="black" />
-          <circle cx="125" cy="95" r="5" fill="black" />
-
-          {/* Brows */}
-          <path d="M60 80 Q75 70 90 85" stroke="black" strokeWidth="3" fill="none" />
-          <path d="M110 85 Q125 70 140 80" stroke="black" strokeWidth="3" fill="none" />
+        <g id="cat-head" className="origin-bottom animate-head-bop">
+          {/* Head */}
+          <ellipse cx="100" cy="110" rx="62" ry="58" fill="#F2C27B" stroke="#111" strokeWidth="3" />
 
           {/* Ears */}
-          <path d="M40 90 Q30 60 60 50" fill="#8B4513" stroke="black" strokeWidth="3" />
-          <path d="M160 90 Q170 60 140 50" fill="#8B4513" stroke="black" strokeWidth="3" />
+          <path d="M48 70 L30 30 L78 52 Z" fill="#E8A95C" stroke="#111" strokeWidth="3" />
+          <path d="M152 70 L170 30 L122 52 Z" fill="#E8A95C" stroke="#111" strokeWidth="3" />
+          <path d="M52 68 L40 40 L72 55 Z" fill="#F7D6A6" />
+          <path d="M148 68 L160 40 L128 55 Z" fill="#F7D6A6" />
 
-          {/* Backwards Cap */}
-          <path d="M50 60 Q100 10 150 60" fill="#ff0040" stroke="black" strokeWidth="3" />
-          <path d="M50 60 L150 60" fill="none" stroke="black" strokeWidth="3" />
-          <rect x="70" y="30" width="60" height="20" rx="5" fill="#cc0033" />
-          
+          {/* Sunglasses */}
+          <rect x="48" y="82" width="44" height="26" rx="6" fill="#111" stroke="#000" strokeWidth="2" />
+          <rect x="108" y="82" width="44" height="26" rx="6" fill="#111" stroke="#000" strokeWidth="2" />
+          <rect x="92" y="92" width="16" height="6" rx="3" fill="#111" />
+          <path d="M48 90 L30 86" stroke="#111" strokeWidth="4" />
+          <path d="M152 90 L170 86" stroke="#111" strokeWidth="4" />
+
+          {/* Nose */}
+          <path d="M96 118 L104 118 L100 126 Z" fill="#D66C6C" stroke="#111" strokeWidth="2" />
+
           {/* Mouth */}
-          <path d="M90 140 Q100 145 110 140" fill="none" stroke="black" strokeWidth="2" />
+          <path d="M100 126 Q95 134 88 136" stroke="#111" strokeWidth="2" fill="none" />
+          <path d="M100 126 Q105 134 112 136" stroke="#111" strokeWidth="2" fill="none" />
+
+          {/* Whiskers */}
+          <path d="M70 120 L30 114" stroke="#111" strokeWidth="2" />
+          <path d="M70 128 L30 130" stroke="#111" strokeWidth="2" />
+          <path d="M130 120 L170 114" stroke="#111" strokeWidth="2" />
+          <path d="M130 128 L170 130" stroke="#111" strokeWidth="2" />
+
+          {/* Neck + Chain */}
+          <path d="M60 162 L140 162 L145 180 L55 180 Z" fill="#222" stroke="#111" strokeWidth="2" />
+          <circle cx="100" cy="172" r="8" fill="#FACC15" stroke="#111" strokeWidth="2" />
         </g>
       </svg>
       <style>{`

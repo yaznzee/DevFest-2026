@@ -1,12 +1,15 @@
 import React from 'react';
-import { GameMode } from '../types';
+import { GameMode, BeatOption } from '../types';
+import { BEAT_OPTIONS } from '../constants';
 import { Mic, Heart, Zap, Play } from 'lucide-react';
 
 interface MainMenuProps {
   onStart: (mode: GameMode) => void;
+  selectedBeat: BeatOption;
+  onSelectBeat: (beat: BeatOption) => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onStart }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onStart, selectedBeat, onSelectBeat }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 relative z-10">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20 z-0 pointer-events-none" />
@@ -18,6 +21,36 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStart }) => {
         <p className="font-mono text-gray-400 mb-12 tracking-widest text-sm md:text-base">
           AI-POWERED LYRICAL COMBAT
         </p>
+      </div>
+
+      <div className="z-10 w-full max-w-4xl mb-10">
+        <h2 className="font-bangers text-2xl text-gray-200 mb-3 text-center">CHOOSE YOUR BEAT</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {BEAT_OPTIONS.map((beat) => {
+            const isActive = beat.id === selectedBeat.id;
+            return (
+              <button
+                key={beat.id}
+                onClick={() => onSelectBeat(beat)}
+                className={`rounded-xl border-2 p-4 text-left transition-all backdrop-blur-md ${
+                  isActive
+                    ? 'border-yellow-400 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.35)] scale-[1.02]'
+                    : 'border-white/10 bg-gray-900/70 hover:border-white/30 hover:scale-[1.01]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-bold text-white">{beat.label}</div>
+                    <div className="text-xs text-gray-400">{beat.sublabel}</div>
+                  </div>
+                  {isActive && (
+                    <div className="text-yellow-400 text-xs font-bold">SELECTED</div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="z-10 grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">

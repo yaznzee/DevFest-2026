@@ -1,4 +1,25 @@
-import { GameMode } from "./types";
+import { BeatOption, GameMode } from "./types";
+
+export const BEAT_OPTIONS: BeatOption[] = [
+  {
+    id: "newgen",
+    label: "New Gen",
+    sublabel: "Lil Baby, Yeat",
+    src: new URL("./beats/newgen.mp3", import.meta.url).toString()
+  },
+  {
+    id: "oldschool",
+    label: "Old School",
+    sublabel: "OG Legends",
+    src: new URL("./beats/oldschool.mp3", import.meta.url).toString()
+  },
+  {
+    id: "underground",
+    label: "Underground",
+    sublabel: "Xaviersobased, 2hollis",
+    src: new URL("./beats/underground.mp3", import.meta.url).toString()
+  }
+];
 
 export const TOTAL_ROUNDS = 1;
 

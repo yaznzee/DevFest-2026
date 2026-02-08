@@ -10,6 +10,15 @@ export enum GameState {
   RESULTS = 'RESULTS'
 }
 
+export type BeatId = 'newgen' | 'oldschool' | 'underground';
+
+export interface BeatOption {
+  id: BeatId;
+  label: string;
+  sublabel?: string;
+  src: string;
+}
+
 export enum TurnState {
   INTRO = 'INTRO',
   P1_READY = 'P1_READY',
