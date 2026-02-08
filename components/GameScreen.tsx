@@ -28,6 +28,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
 
   const [p1Score, setP1Score] = useState(0);
   const [p2Score, setP2Score] = useState(0);
+  const [judgeLogs, setJudgeLogs] = useState<string[]>([]);
 
   const [liveTranscript, setLiveTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -274,9 +275,17 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
         // FINAL PHASE
         // Wait a beat before showing judging screen
         setTimeout(async () => {
-            setTurnState(TurnState.ROUND_END); // Re-purposing ROUND_END as 'Judging in progress' visually or add explicit JUDGING enum if needed.
-            // Actually, let's use the JUDGING logic if added to TurnState in types, 
-            // but for safety in this file let's just use a visual indicator
+            setTurnState(TurnState.ROUND_END);
+            setJudgeLogs([]);
+            
+            const addLog = (msg: string) => {
+              console.log(msg);
+              setJudgeLogs(prev => [...prev, msg]);
+            };
+            
+            addLog("🎤 Starting judge evaluation...");
+            addLog(`P1: ${p1Text.substring(0, 50)}${p1Text.length > 50 ? '...' : ''}`);
+            addLog(`P2: ${p2Text.substring(0, 50)}${p2Text.length > 50 ? '...' : ''}`);
 
             const combinedTranscript = `P1: ${p1Text}\nP2: ${p2Text}`;
             const savePromise = saveTranscript(combinedTranscript).catch((err) => {
@@ -284,14 +293,18 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
               return null;
             });
             
+            addLog("⚖️ Calling judges...");
             // Execute Scoring
             const results = await generateGameResults(
                 p1Text, 
                 p1Words, 
                 p2Text, 
                 p2Words, 
-                mode
+                mode,
+                (log: string) => addLog(log)
             );
+            addLog("✅ Judging complete!");
+            addLog(`Final: ${results.p1TotalScore} vs ${results.p2TotalScore}`);
 
             const saved = await savePromise;
             if (saved) {
@@ -383,11 +396,14 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
       
       case TurnState.ROUND_END: // Acts as "JUDGING" state
         return (
-            <div className="flex flex-col items-center bg-black/80 p-8 rounded-xl border border-yellow-500/50 backdrop-blur-xl animate-pulse">
-                <Gavel className="text-yellow-400 mb-4" size={64} />
-                <h2 className="text-3xl font-bangers text-white mb-2">JUDGES DELIBERATING</h2>
-                <div className="flex gap-2 text-xs font-mono text-gray-400">
-                    <span>FLOWBOT</span>•<span>LIL' LOGIC</span>•<span>GRANDMA</span>•<span>SNOOP</span>
+            <div className="flex flex-col items-center bg-black/80 p-6 rounded-xl border border-yellow-500/50 backdrop-blur-xl max-w-2xl">
+                <div className="text-4xl font-bangers text-yellow-400 animate-pulse mb-4">
+                  GIVING FEEDBACK...
+                </div>
+                <div className="text-xs font-mono text-gray-300 space-y-1 text-left w-full max-h-40 overflow-y-auto">
+                  {judgeLogs.map((log, i) => (
+                    <p key={i} className="animate-fadeIn">{log}</p>
+                  ))}
                 </div>
             </div>
         );

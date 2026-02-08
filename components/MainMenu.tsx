@@ -99,20 +99,6 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStart, selectedBeat, onSelectBeat
         </button>
       </div>
 
-      <div className="mt-16 z-10 flex gap-8 text-gray-500 text-xs">
-         <div className="flex flex-col items-center">
-            <span className="font-bold text-gray-400">POWERED BY</span>
-         </div>
-         <div className="flex gap-4 items-center opacity-70">
-            <span>GEMINI API</span>
-            <span>•</span>
-            <span>FEATHERLESS</span>
-            <span>•</span>
-            <span>K2 THINK</span>
-            <span>•</span>
-            <span>11LABS (Sim)</span>
-         </div>
-      </div>
     </div>
   );
 };
