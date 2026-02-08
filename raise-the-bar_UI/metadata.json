@@ -1,0 +1,7 @@
+{
+  "name": "Raise the Bar",
+  "description": "A street-themed AI rap battle game where players compete to raise their bar the highest. Features coherence analysis and sentiment scoring.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
