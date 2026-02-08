@@ -68,7 +68,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStart, selectedBeat, onSelectBeat
           <div>
             <h3 className="font-bangers text-3xl text-purple-400 mb-2">Street Battle</h3>
             <p className="text-gray-400 text-sm">
-              Spit chaotic bars. Get rated on aggression, rhyme density, and street cred by <span className="text-purple-300">Featherless AI</span>.
+              Spit chaotic bars. Get rated on aggression, rhyme density, and street cred.
             </p>
           </div>
           <div className="mt-auto flex items-center gap-2 text-purple-400 text-sm font-bold uppercase tracking-wider">
@@ -90,7 +90,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStart, selectedBeat, onSelectBeat
           <div>
             <h3 className="font-bangers text-3xl text-pink-400 mb-2">Kill 'Em w/ Kindness</h3>
             <p className="text-gray-400 text-sm">
-              Out-nice your opponent. Get rated on sentiment, empathy, and wholesomeness by <span className="text-pink-300">Gemini</span>.
+              Out-nice your opponent. Get rated on sentiment, empathy, and wholesomeness.
             </p>
           </div>
           <div className="mt-auto flex items-center gap-2 text-pink-400 text-sm font-bold uppercase tracking-wider">
