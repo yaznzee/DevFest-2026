@@ -5,6 +5,11 @@
 
 Real‑time, two‑player AI rap battles where you choose a beat, spit a verse, and let an intelligent panel of AI judges decide who really brought the bars. Think of it as *versus mode* for the future of hip‑hop.
 
+**🏆 The Team:** Tawhid Zaman ([GitHub](https://github.com/TawhidZGit) / [LinkedIn](https://linkedin.com/in/tawhid-zaman)) • 
+Yazn Alzeghaibi ([GitHub](https://github.com/yaznzee) / [LinkedIn](https://linkedin.com/in/yazn-alzeghaibi)) • 
+Maheen Rassell ([GitHub](https://github.com/mrassell) / [LinkedIn](https://linkedin.com/in/mrassell)) • 
+Mohammed Miyajan ([GitHub](https://github.com) / [LinkedIn](https://linkedin.com/in/mohammed-miyajan-509482296))
+
 </div>
 
 ---
@@ -161,12 +166,6 @@ Contributions are welcome! Fork the repo and open a pull request. Please:
 2. Commit with clear messages.
 3. Run `npm run lint` and `npm run build` before submitting.
 4. Describe your changes in the PR.
-
----
-
-## License
-
-This project is released under the **MIT License**. See `LICENSE` for details.
 
 ---
 
