@@ -1,94 +1,179 @@
 <div align="center">
 
-# RAISE THE BAR
-### Columbia University DevFest 2026 Winner
+# 🎤 RAISE THE BAR
+### Winner – Columbia University DevFest 2026
 
-Real-time, two-player AI rap battles. Pick a beat, spit your verse, and let an AI judge panel decide who really brought bars.
+Real‑time, two‑player AI rap battles where you choose a beat, spit a verse, and let an intelligent panel of AI judges decide who really brought the bars. Think of it as *versus mode* for the future of hip‑hop.
+
 </div>
 
-## What This Is
-Raise The Bar is a competitive rap battle game built with React + Vite.
-Two players take timed turns on the mic, then AI judges score performance quality, flow, and word usage with live feedback.
+---
 
-## Why It Feels Different
-- Head-to-head battle loop with live momentum and round tension
-- Two distinct modes: `Street Battle` and `Kill 'Em w/ Kindness`
-- Beat switching with three styles: `New Gen`, `Old School`, `Underground`
-- Voice capture plus transcription pipeline for instant scoring
-- Multi-judge AI panel with weighted verdicts and coaching notes
-- Battle data persisted to Supabase for history and analysis
+## Overview
+Raise The Bar is an experimental web game built with **React**, **TypeScript**, and **Vite**. Two players compete in short, timed rap rounds; their audio is transcribed and scored by multiple AI judges that evaluate flow, wordplay, and delivery. Results are stored for replay and analytics.
 
-## Battle Flow
-1. Choose mode and beat.
-2. Player 1 records a 20-second verse.
-3. Player 2 records a 20-second verse.
-4. Transcripts are analyzed against rhyme targets.
-5. Judges return scores and feedback.
-6. Winner screen shows final breakdown and transcripts.
+This project took home the top prize at DevFest 2026 and is designed to be both a showcase of real‑time audio processing and a fun proof‑of‑concept for AI judging.
 
-## Demo
-- AI Studio prototype: https://ai.studio/apps/drive/1ZPK_79HzRYE7oprpdNtk7Ghl6GhVJjTt
+---
 
-## Stack
-- Frontend: `React 19`, `TypeScript`, `Vite`, `Tailwind (CDN)`, `lucide-react`
-- Speech-to-Text: `ElevenLabs` (with browser speech fallback in live capture)
-- LLM Judging: `Featherless`, optional `K2` advisor model
-- Database: `Supabase`
+## Key Features
 
-## Quick Start
+- **Live, turn‑based battle loop** with momentum and instant scoring
+- Two game modes: *Street Battle* (aggressive) and *Kill ’Em with Kindness* (positive vibes)
+- Three beat styles: *New Gen*, *Old School*, and *Underground*
+- Browser microphone capture + speech‑to‑text pipeline
+- Multi‑judge AI panel with weighted verdicts and coaching feedback
+- Optional coaching model powered by K2
+- Persistent battle history via Supabase
+- Modular architecture for easy extension
+
+---
+
+## Gameplay Flow
+1. Select a game mode and beat.
+2. Player 1 records a 20‑second verse.
+3. Player 2 records a 20‑second verse.
+4. Verses are transcribed and analyzed for rhymes, cadence, and word choice.
+5. AI judges return scores, breakdowns, and advice.
+6. Winner screen displays results, transcripts, and judge comments.
+
+---
+
+## Technology Stack
+
+| Area | Tools / Services |
+|------|------------------|
+| Frontend | React 19, TypeScript, Vite, Tailwind (CDN), lucide‑react |
+| Speech‑to‑Text | ElevenLabs (with browser fallback) |
+| AI Judging | Featherless (primary), K2 (coach/advisor) |
+| Database | Supabase (PostgreSQL) |
+| Hosting | Any static host (Vercel, Netlify, etc.) |
+
+---
+
+## Getting Started
+
 ### Prerequisites
-- Node.js 18+
-- npm
-- Microphone access in browser
 
-### Install and Run
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Create `.env.local` in the project root:
-   ```bash
-   VITE_ELEVEN_LABS_API_KEY=your_key
-   VITE_FEATHERLESS_API_KEY=your_key
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+- Node.js **18+**
+- npm (or yarn)
+- A working microphone and browser permission
 
-   # Optional (Coach K2 feedback)
-   VITE_K2_API_KEY=your_key
-   VITE_K2_BASE_URL=your_provider_base_url
-   VITE_K2_MODEL=k2-think-v2
-   ```
-3. Start development server:
-   ```bash
-   npm run dev
-   ```
+### Installation
+
+```bash
+git clone <repo-url>
+cd DevFest-2026
+npm install
+```
+
+### Configuration
+Create a `.env.local` file in the project root with the following variables:
+
+```bash
+VITE_ELEVEN_LABS_API_KEY=your_elevenlabs_key
+VITE_FEATHERLESS_API_KEY=your_featherless_key
+VITE_SUPABASE_URL=https://<your-project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
+
+# Optional: K2 coaching model
+VITE_K2_API_KEY=your_key
+VITE_K2_BASE_URL=https://api.yourprovider.com
+VITE_K2_MODEL=k2-think-v2
+```
+
+> 🔒 **Security note:** In production, move all external API calls to a secure backend proxy. The current setup is for rapid prototyping.
+
+### Run Locally
+
+```bash
+npm run dev
+```
+
+Open http://localhost:5173 (or port printed by Vite) in your browser.
 
 ### Production Build
+
 ```bash
 npm run build
 npm run preview
 ```
 
-## Supabase Schema
-The app expects a `transcripts` table with fields similar to:
-- `id` (primary key)
-- `text` (text)
-- `created_at` (timestamp)
-- `grade` (text, nullable)
-- `feedback` (text, nullable)
+Deploy the contents of the `dist/` directory to your preferred static hosting provider.
 
-## Project Map
-```text
-.
-|- components/      # Screens and gameplay UI
-|- services/        # AI, audio, scoring, and Supabase clients
-|- beats/           # Beat audio files
-|- App.tsx          # Top-level game state flow
-|- constants.ts     # Mode config, rhyme groups, beat options
-|- types.ts         # Shared types and enums
-|- BACKEND.md       # Backend architecture notes
+---
+
+## Supabase Schema
+
+```sql
+create table transcripts (
+  id serial primary key,
+  text text not null,
+  created_at timestamp with time zone default now(),
+  grade text,
+  feedback text
+);
 ```
 
-## Notes
-- API calls are currently client-side for demo speed.
-- For production hardening, move external service calls behind a secure backend proxy.
+Additional tables (users, battles, etc.) can be added for extended features.
+
+---
+
+## Project Structure
+
+```
+.
+├─ beats/               # Audio files for beats
+├─ components/          # React screens & UI components
+├─ services/            # API clients and business logic
+├─ App.tsx              # Top‑level state and routing
+├─ constants.ts         # Mode/beat configuration, rhyme groups
+├─ types.ts             # Shared TypeScript types
+├─ BACKEND.md           # Notes on backend architecture
+├─ README.md            # ← you are here
+```
+
+---
+
+## Development Tips
+
+- **AI keys:** Keep them private and do not commit `.env.local`.
+- **Adding beats:** Drop new `.mp3` files into `beats/` and update `constants.ts`.
+- **Judges:** Modify `services/scoringService.ts` to adjust scoring logic.
+
+---
+
+## Dependencies
+
+See `package.json` for the full list. Notable packages:
+
+- `vite` / `react` / `typescript`
+- `@supabase/supabase-js`
+- `lucide-react` (icons)
+
+---
+
+## Contributing
+
+Contributions are welcome! Fork the repo and open a pull request. Please:
+
+1. Create a feature branch from `main`.
+2. Commit with clear messages.
+3. Run `npm run lint` and `npm run build` before submitting.
+4. Describe your changes in the PR.
+
+---
+
+## License
+
+This project is released under the **MIT License**. See `LICENSE` for details.
+
+---
+
+## Acknowledgements
+
+Thanks to Columbia University DevFest organizers for the platform and encouragement.
+
+---
+
+> **Raise The Bar**: where every verse is judged, every rhyme counts, and every coder can spit bars.
