@@ -36,8 +36,8 @@ This project took home the top prize at DevFest 2026 and is designed to be both 
 
 ## Gameplay Flow
 1. Select a game mode and beat.
-2. Player 1 records a 20‑second verse.
-3. Player 2 records a 20‑second verse.
+2. Player 1 records a verse and has to say the words on the screen.
+3. Player 2 records a verse and has to say the words on the screen.
 4. Verses are transcribed and analyzed for rhymes, cadence, and word choice.
 5. AI judges return scores, breakdowns, and advice.
 6. Winner screen displays results, transcripts, and judge comments.
