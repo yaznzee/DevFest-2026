@@ -307,11 +307,19 @@ export const generateGameResults = async (
 };
 
 export const calculateScore = async (transcript: string, words: string[], mode: GameMode) => {
+  // determine which of the assigned target words actually appeared
   const matched = getMatchedWords(transcript, words);
-  const emotionalCount = countEmotionalWords(transcript);
-  const score = 30 + (matched.length * 10) + (emotionalCount * 3);
+
+  // the visual bar percentage should simply reflect how many of the
+  // target words were hit. for example, using 2 of 4 words = 50%.
+  // if no words were supplied we default to 0 to avoid division by zero.
+  let percent = 0;
+  if (words.length > 0) {
+    percent = (matched.length / words.length) * 100;
+  }
+
   return {
-    score: Math.min(100, score),
+    score: Math.min(100, percent),
     reasoning: `Matched: ${matched.join(", ") || "none"}`
   };
 };

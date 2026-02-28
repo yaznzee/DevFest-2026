@@ -149,6 +149,12 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
   };
 
   const startP1Turn = () => {
+    // kick off a fresh round: clear previous transcripts/scores first
+    setP1Transcript("");
+    setP2Transcript("");
+    setP1Score(0);
+    setP2Score(0);
+
     const words = getRandomRhymeGroup(mode);
     setCurrentWords(words);
     setP1Words(words);
@@ -258,10 +264,26 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
 
     setTurnState(player === 1 ? TurnState.P1_PROCESSING : TurnState.P2_PROCESSING);
 
-    // Temp visual score
+    // Temp visual score – calculate percentage of that round's
+    // target words that were actually spoken. (Score is 0–100.)
     const tempScore = await calculateScore(finalTranscript, currentWords, mode);
-    if (player === 1) setP1Score(tempScore.score);
-    else setP2Score(tempScore.score);
+
+    if (player === 1) {
+      // immediately show P1's score so they can see their meter move
+      setP1Score(tempScore.score);
+    } else {
+      // player 2 just finished; at this point we want **both meters** to
+      // rise together so the 2‑bar animation happens simultaneously
+      // (the user asked that the bars go up when both rappers are done).
+
+      // compute P2 score first
+      setP2Score(tempScore.score);
+
+      // recompute P1's score using the stored transcript/word list to
+      // force the bar animation again in case it already rendered earlier
+      const p1Final = await calculateScore(p1Transcript, p1Words, mode);
+      setP1Score(p1Final.score);
+    }
 
     const p1Text = player === 1 ? finalTranscript : p1Transcript;
     const p2Text = player === 2 ? finalTranscript : p2Transcript;
