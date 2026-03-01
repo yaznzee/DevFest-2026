@@ -167,6 +167,11 @@ const parseK2Response = async (
   const emotionalP1 = countEmotionalWords(p1Transcript);
   const emotionalP2 = countEmotionalWords(p2Transcript);
 
+  // remove any leading "Player 1:" / "Player 2:" labels that may
+  // still be present in the extracted strings
+  const clean = (text: string) => text.replace(/^(Player\s*1|P1)[:\s-]*/i, '')
+                                  .replace(/^(Player\s*2|P2)[:\s-]*/i, '');
+
   return {
     judgeType: judge.judgeType,
     name: judge.name,
@@ -174,8 +179,8 @@ const parseK2Response = async (
     avatar: judge.avatar,
     scoreP1: 0,
     scoreP2: 0,
-    comment: p1Feedback || "(no feedback)",
-    advice: p2Feedback || "",
+    comment: clean(p1Feedback) || "(no feedback)",
+    advice: clean(p2Feedback) || "",
     matchedWordsP1: p1Matched,
     matchedWordsP2: p2Matched,
     emotionalWordsP1: emotionalP1,
