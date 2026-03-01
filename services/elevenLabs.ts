@@ -1,6 +1,9 @@
 const BASE_URL = "https://api.elevenlabs.io/v1/speech-to-text";
 
-export const transcribeWithElevenLabs = async (audioBlob: Blob): Promise<string> => {
+export const transcribeWithElevenLabs = async (
+  audioBlob: Blob,
+  fallbackText: string = ""
+): Promise<string> => {
   const apiKey = import.meta.env.VITE_ELEVEN_LABS_API_KEY as string | undefined;
 
   if (!apiKey) {
@@ -13,20 +16,34 @@ export const transcribeWithElevenLabs = async (audioBlob: Blob): Promise<string>
   form.append("file", audioBlob, "recording.webm");
   form.append("language_code", "en");
 
-  const response = await fetch(BASE_URL, {
-    method: "POST",
-    headers: {
-      "xi-api-key": apiKey
-    },
-    body: form
-  });
+  let text = "";
 
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error(`[ElevenLabs] Error ${response.status}: ${errText}`);
-    throw new Error(`ElevenLabs API Error: ${response.status}`);
+  try {
+    const response = await fetch(BASE_URL, {
+      method: "POST",
+      headers: {
+        "xi-api-key": apiKey
+      },
+      body: form
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[ElevenLabs] Error ${response.status}: ${errText}`);
+      throw new Error(`ElevenLabs API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    text = (data?.text as string | undefined) || "";
+  } catch (e) {
+    console.warn("[ElevenLabs] transcription failed, falling back to live transcript", e);
   }
 
-  const data = await response.json();
-  return (data?.text as string | undefined) || "";
+  // if ElevenLabs returned very little or nothing, fall back to the
+  // interim speech recognition captured with Web Speech API (live transcript)
+  if (!text.trim() && fallbackText.trim()) {
+    return fallbackText;
+  }
+
+  return text;
 };

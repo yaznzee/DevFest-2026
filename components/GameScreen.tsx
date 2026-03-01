@@ -182,10 +182,18 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
     recordStopTimeoutRef.current = null;
   };
 
-  const startCountdown = (player: 1 | 2) => {
+  const startCountdown = async (player: 1 | 2) => {
+    // start recording/recognition as soon as countdown begins so we
+    // don't miss the first syllable if the rapper jumps in early
     clearTimers();
     activePlayerRef.current = player;
     setCountdownValue(COUNTDOWN_SECONDS);
+
+    // fire up audio capture **before** the beat drops
+    await startAudioCapture();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.start(); } catch (e) { console.error(e); }
+    }
 
     let remaining = COUNTDOWN_SECONDS;
     countdownTimerRef.current = window.setInterval(() => {
@@ -194,6 +202,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
         if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
         countdownTimerRef.current = null;
         setCountdownValue(null);
+        // beat and beat track start when the recording officially begins
         handleStartRecording(player);
       } else {
         setCountdownValue(remaining);
@@ -205,14 +214,11 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
     setLiveTranscript("");
     setIsListening(true);
     setTimerRemaining(RECORD_SECONDS);
-    await startAudioCapture();
-    // Start music for player
+
+    // recording/recognition already started during countdown; just kick
+    // off the beat and move into recording state.
     audioService.startBeatTrack(20);
     audioService.playKick();
-    
-    if (recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch(e) { console.error(e); }
-    }
 
     setTurnState(player === 1 ? TurnState.P1_RECORDING : TurnState.P2_RECORDING);
 
@@ -250,7 +256,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ mode, beat, onFinish, onExit })
 
     if (audioBlob) {
       try {
-        const elevenTranscript = await transcribeWithElevenLabs(audioBlob);
+        const elevenTranscript = await transcribeWithElevenLabs(audioBlob, liveTranscript);
         if (elevenTranscript.trim()) {
           finalTranscript = elevenTranscript.trim();
         }

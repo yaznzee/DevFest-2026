@@ -9,6 +9,33 @@ interface ResultsScreenProps {
 }
 
 const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, onRestart, onExit }) => {
+  const coach = result.judges.find(j => j.judgeType === "advisor" || j.name.toLowerCase().includes("coach"));
+  const [showCoach, setShowCoach] = React.useState(false);
+
+  // Parse and split the coach's combined feedback
+  let p1CoachFeedback = coach?.comment || "";
+  let p2CoachFeedback = coach?.advice || "";
+
+  if (coach && typeof p1CoachFeedback === 'string' && p1CoachFeedback.toLowerCase().includes('player 2:')) {
+    // If both players' feedback is crammed into the comment string
+    const p1Match = p1CoachFeedback.match(/Player 1:\s*([\s\S]*?)(?=Player 2:)/i);
+    const p2Match = p1CoachFeedback.match(/Player 2:\s*([\s\S]*)/i);
+    
+    if (p1Match && p2Match) {
+      p1CoachFeedback = p1Match[1].trim();
+      p2CoachFeedback = p2Match[1].trim();
+    } else {
+      // Fallback split if regex fails
+      const parts = p1CoachFeedback.split(/Player 2:/i);
+      p1CoachFeedback = parts[0].replace(/Player 1:/i, '').trim();
+      p2CoachFeedback = parts[1] ? parts[1].trim() : p2CoachFeedback;
+    }
+  } else if (coach) {
+    // If they are separate but still contain the unwanted prefixes
+    p1CoachFeedback = p1CoachFeedback.replace(/Player 1:/i, '').trim();
+    p2CoachFeedback = typeof p2CoachFeedback === 'string' ? p2CoachFeedback.replace(/Player 2:/i, '').trim() : '';
+  }
+
   return (
     <div className="flex flex-col items-center h-screen bg-black/95 text-white overflow-hidden">
       <div className="flex-1 w-full overflow-y-auto p-4">
@@ -105,31 +132,43 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, onRestart, onExit
         </div>
       </div>
 
-      {/* Coach K2 Feedback - Centered */}
-      {result.judges.find(j => j.judgeType === "advisor") && (
+      {/* Coach K2 Feedback - Centered collapsible card */}
+      {coach && (
         <div className="w-full max-w-4xl mx-auto mb-12">
-          <div className="text-center mb-6">
-            <h2 className="font-bangers text-3xl text-yellow-400 flex items-center justify-center gap-2">
-              <span>🎓</span> Coach K2 Feedback
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="text-center">
-              <h3 className="font-bold text-purple-400 mb-3 text-lg">Player 1</h3>
-              <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {result.judges.find(j => j.judgeType === "advisor")?.comment}
-              </p>
-            </div>
-            <div className="text-center">
-              <h3 className="font-bold text-green-400 mb-3 text-lg">Player 2</h3>
-              <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {result.judges.find(j => j.judgeType === "advisor")?.advice}
-              </p>
-            </div>
+          <div className="bg-gray-800/50 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
+            <button
+              onClick={() => setShowCoach(prev => !prev)}
+              className="w-full flex items-center justify-between text-left">
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">🎓</span>
+                <h3 className="font-bold font-bangers text-xl tracking-wide text-yellow-400">
+                  Coach K2 Feedback
+                </h3>
+              </div>
+              <span className="text-gray-400 text-lg">{showCoach ? '▲' : '▼'}</span>
+            </button>
+
+            {showCoach && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="text-center">
+                  <h4 className="font-bold text-purple-400 mb-2 text-lg">Player 1</h4>
+                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                    {p1CoachFeedback}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <h4 className="font-bold text-green-400 mb-2 text-lg">Player 2</h4>
+                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                    {p2CoachFeedback}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* Footer Buttons */}
       <div className="flex gap-6 p-8 bg-black/50 backdrop-blur-sm w-full justify-center border-t border-white/10">
         <button 
           onClick={onRestart}

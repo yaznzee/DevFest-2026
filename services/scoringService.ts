@@ -42,14 +42,17 @@ const JUDGES_CONFIG: JudgeConfig[] = [
     role: "Energy & Delivery",
     avatar: "🔥",
     judgeType: "scorer",
-    weight: 0.2,
+    weight: 0.25,
+    model: "OmniDimen/OmniDimen-V1.5-4B-Emotion",
     prompt: (p1Text, p2Text, p1Matched, p2Matched) => `
-You are a rap battle judge evaluating two rappers' verses.
+You are a rap battle judge evaluating two rappers' verses for **energy** and **delivery**.
 
 P1 (${p1Text.split(/\s+/).length} words): "${p1Text}"
 P2 (${p2Text.split(/\s+/).length} words): "${p2Text}"
 
-Score both 0-100 on their energy, delivery, and presence. Look for passion, confidence, and emotional impact in their raps. Longer verses with strong delivery should score higher.
+If one or both transcripts are empty, still assign a score and comment (a silent rapper deserves feedback).
+Consider crowd‑level hype, punch timing, vocal variety, and how hard the lyrics hit.
+Longer verses with strong intensity should score higher, but don't reward rambling.
 
 Format: P1 Score: X, P2 Score: Y
 Verdict: (brief analysis of their energy and delivery)
@@ -61,17 +64,40 @@ Verdict: (brief analysis of their energy and delivery)
     role: "Rhyme & Rhythm",
     avatar: "🎯",
     judgeType: "scorer",
-    weight: 0.8,
+    weight: 0.5,
+    model: "OmniDimen/OmniDimen-V1.5-4B-Emotion",
     prompt: (p1Text, p2Text, p1Matched, p2Matched) => `
-You are a rap battle judge evaluating two rappers' verses.
+You are a rap battle judge evaluating two rappers' verses for **flow**, **rhyme schemes**, and **rhythm**.
 
-P1 (${p1Text.split(/\s+/).length} words, used ${p1Matched.length} rhyme words): "${p1Text}"
-P2 (${p2Text.split(/\s+/).length} words, used ${p2Matched.length} rhyme words): "${p2Text}"
+P1 (${p1Text.split(/\s+/).length} words, used ${p1Matched.length} target words): "${p1Text}"
+P2 (${p2Text.split(/\s+/).length} words, used ${p2Matched.length} target words): "${p2Text}"
 
-Score both 0-100 on their flow, rhyme scheme, and rhythm. Look for consistent rhyming, clever wordplay, and bars that fit the beat. Longer verses with tight rhymes and flow should score higher.
+Give scores 0-100. Pay attention to multisyllabic rhymes, internal rhyme, sync with beat, and clever wordplay.
+If a rapper says nothing, give them a low score but still comment.
 
 Format: P1 Score: X, P2 Score: Y
 Verdict: (brief analysis of their flow and rhyme scheme)
+`
+  },
+  {
+    id: "wordplay",
+    name: "Punchline Panel",
+    role: "Wordplay & Creativity",
+    avatar: "💥",
+    judgeType: "scorer",
+    weight: 0.25,
+    model: "OmniDimen/OmniDimen-V1.5-4B-Emotion",
+    prompt: (p1Text, p2Text, p1Matched, p2Matched) => `
+You are a rap battle judge focusing on **wordplay**, **punchlines**, and **originality**.
+
+P1: "${p1Text}"
+P2: "${p2Text}"
+
+Score both 0-100. Look for clever metaphors, surprise twists, and bars that hit hard.
+Even if the verse is blank, provide constructive commentary and give a fair score.
+
+Format: P1 Score: X, P2 Score: Y
+Verdict: (brief analysis of their creativity)
 `
   },
   {
@@ -87,11 +113,14 @@ You are a rap coach giving personalized feedback to two rappers about how they c
 Player 1's verse: "${p1Text}"
 Player 2's verse: "${p2Text}"
 
-Give 3 lines of personalized feedback for Player 1 about how they can do better next time, then 3 lines for Player 2. Focus on specific improvements they can make. Just write the feedback, nothing else.`
+Even if a rapper didn't say anything, offer encouragement and suggestions.
+Give 3 lines of personalized feedback for Player 1, then 3 lines for Player 2. Focus on specific improvements. Just write the feedback, nothing else.`
   }
+
 ];
 
 export interface EnhancedJudgeFeedback extends JudgeFeedback {
+  judgeType: "scorer" | "advisor";
   matchedWordsP1?: string[];
   matchedWordsP2?: string[];
   emotionalWordsP1?: number;
@@ -106,22 +135,47 @@ const parseK2Response = async (
   p1Matched: string[],
   p2Matched: string[]
 ): Promise<EnhancedJudgeFeedback> => {
-  // Split response: first 3 lines for P1, rest for P2
-  const lines = rawContent.trim().split('\n').filter(l => l.trim());
-  const p1Feedback = lines.slice(0, 3).join('\n').trim();
-  const p2Feedback = lines.slice(3).join('\n').trim();
-  
+  // K2 output varies; attempt multiple heuristics to keep player1 and
+  // player2 feedback separate.
+  let p1Feedback = "";
+  let p2Feedback = "";
+  const text = rawContent.trim();
+
+  // 1. split on explicit "Player 2" label if present
+  const player2Idx = text.search(/player\s*2[:\-]/i);
+  if (player2Idx !== -1) {
+    p1Feedback = text.substring(0, player2Idx).trim();
+    p2Feedback = text.substring(player2Idx).replace(/player\s*2[:\-]?/i, '').trim();
+  } else {
+    // 2. split on blank line(s)
+    const paragraphs = text.split(/\n\s*\n/);
+    if (paragraphs.length >= 2) {
+      p1Feedback = paragraphs[0].trim();
+      p2Feedback = paragraphs.slice(1).join("\n\n").trim();
+    } else {
+      // 3. old fallback: first 3 lines / rest
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length > 3) {
+        p1Feedback = lines.slice(0, 3).join('\n');
+        p2Feedback = lines.slice(3).join('\n');
+      } else {
+        p1Feedback = text;
+      }
+    }
+  }
+
   const emotionalP1 = countEmotionalWords(p1Transcript);
   const emotionalP2 = countEmotionalWords(p2Transcript);
-  
+
   return {
+    judgeType: judge.judgeType,
     name: judge.name,
     role: judge.role,
     avatar: judge.avatar,
     scoreP1: 0,
     scoreP2: 0,
-    comment: p1Feedback,
-    advice: p2Feedback,
+    comment: p1Feedback || "(no feedback)",
+    advice: p2Feedback || "",
     matchedWordsP1: p1Matched,
     matchedWordsP2: p2Matched,
     emotionalWordsP1: emotionalP1,
@@ -143,8 +197,16 @@ const parseFeatherlessResponse = async (
   const scoreRegex = /P1\s+Score:\s*(\d+).*?P2\s+Score:\s*(\d+)/s;
   const scoreMatch = rawContent.match(scoreRegex);
   
-  const p1Score = scoreMatch ? Math.min(100, Math.max(0, Number(scoreMatch[1]))) : 50;
-  const p2Score = scoreMatch ? Math.min(100, Math.max(0, Number(scoreMatch[2]))) : 50;
+  let p1Score = scoreMatch ? Math.min(100, Math.max(0, Number(scoreMatch[1]))) : 0;
+  let p2Score = scoreMatch ? Math.min(100, Math.max(0, Number(scoreMatch[2]))) : 0;
+
+  // if transcripts were totally empty, we still want the judges to
+  // provide something sensible rather than 0/0; leave scores but
+  // comment appropriately
+  if (!p1Transcript.trim() && !p2Transcript.trim()) {
+    p1Score = 0;
+    p2Score = 0;
+  }
   
   console.log(`${judge.name}: P1=${p1Score}, P2=${p2Score}`);
   
@@ -156,12 +218,13 @@ const parseFeatherlessResponse = async (
   const emotionalP2 = countEmotionalWords(p2Transcript);
   
   return {
+    judgeType: judge.judgeType,
     name: judge.name,
     role: judge.role,
     avatar: judge.avatar,
     scoreP1: p1Score,
     scoreP2: p2Score,
-    comment: verdict,
+    comment: verdict || "(no comment)",
     advice: "",
     matchedWordsP1: p1Matched,
     matchedWordsP2: p2Matched,
@@ -183,39 +246,38 @@ const fetchJudgeVerdict = async (
   ];
 
   try {
-    // Use K2 for advisor, Featherless for scorers
-    if (judge.judgeType === "advisor" && judge.model === "k2-think-v2" && isK2Configured()) {
-      console.log("\n🎓 === COACH K2 DEBUG START ===");
-      console.log("Judge name:", judge.name);
-      console.log("Calling K2 API...");
-      console.log("Prompt:", prompt);
-      
-      const rawContent = await callK2(messages, judge.model);
-      
-      console.log("\n🎓 K2 RAW RESPONSE:");
-      console.log(rawContent);
-      console.log("\n🎓 K2 Response length:", rawContent.length);
-      console.log("🎓 === COACH K2 DEBUG END ===\n");
-      
-      return await parseK2Response(rawContent, judge, p1Transcript, p2Transcript, p1Matched, p2Matched);
-    } else {
-      const rawContent = await callFeatherless(messages, "OmniDimen/OmniDimen-V1.5-4B-Emotion");
-      return await parseFeatherlessResponse(rawContent, judge, p1Transcript, p2Transcript, p1Matched, p2Matched);
+    // select the appropriate AI backend based on judgeType/model
+    if (judge.judgeType === "advisor" && judge.model && judge.model.startsWith("k2")) {
+      if (isK2Configured()) {
+        console.log(`\n🎓 [${judge.name}] calling K2 model ${judge.model}`);
+        const rawContent = await callK2(messages, judge.model);
+        return await parseK2Response(rawContent, judge, p1Transcript, p2Transcript, p1Matched, p2Matched);
+      } else {
+        console.warn(`K2 model requested but configuration missing, falling back to Featherless`);
+      }
     }
+
+    // fallback branch (scorers or unconfigured advisors)
+    const defaultModel = "OmniDimen/OmniDimen-V1.5-4B-Emotion";
+    const modelName = judge.model && !judge.model.startsWith("k2") ? judge.model : defaultModel;
+    const rawContent = await callFeatherless(messages, modelName, 0.5);
+    return await parseFeatherlessResponse(rawContent, judge, p1Transcript, p2Transcript, p1Matched, p2Matched);
   } catch (e) {
-    console.error(`Judge ${judge.name} failed:`, e);
+    console.error(`Judge ${judge.name} call failed:`, e);
 
     const emotionalP1 = countEmotionalWords(p1Transcript);
     const emotionalP2 = countEmotionalWords(p2Transcript);
 
+    // even on error, return a feedback object so UI doesn't hang
     return {
+      judgeType: judge.judgeType,
       name: judge.name,
       role: judge.role,
       avatar: judge.avatar,
-      scoreP1: 50,
-      scoreP2: 50,
-      comment: "Error",
-      advice: "Try again",
+      scoreP1: 0,
+      scoreP2: 0,
+      comment: "(judge unavailable – defaulted)",
+      advice: "",
       matchedWordsP1: p1Matched,
       matchedWordsP2: p2Matched,
       emotionalWordsP1: emotionalP1,
@@ -259,23 +321,31 @@ export const generateGameResults = async (
 
   // Calculate weighted scores from judges (20% passion, 80% flow)
   // Only include scorers, not advisors
+  // only scorers contribute to the numeric result
   const scoringJudges = judges.filter(j => j.judgeType === "scorer");
+
+  // normalize weights so they add up to 1 (handles dynamic config)
+  const totalWeight = scoringJudges
+    .map(j => JUDGES_CONFIG.find(c => c.name === j.name)?.weight || 0)
+    .reduce((a, b) => a + b, 0) || 1;
+
   let p1TotalScore = 0;
   let p2TotalScore = 0;
   
-  for (let i = 0; i < scoringJudges.length; i++) {
-    const judgeConfig = JUDGES_CONFIG.find(jc => jc.name === scoringJudges[i].name);
-    const weight = judgeConfig?.weight || 0.5;
-    const judgeScore1 = scoringJudges[i].scoreP1 * weight;
-    const judgeScore2 = scoringJudges[i].scoreP2 * weight;
-    
+  scoringJudges.forEach(judgeFeedback => {
+    const judgeConfig = JUDGES_CONFIG.find(c => c.name === judgeFeedback.name);
+    const rawWeight = judgeConfig?.weight || 0;
+    const weight = rawWeight / totalWeight;
+    const judgeScore1 = judgeFeedback.scoreP1 * weight;
+    const judgeScore2 = judgeFeedback.scoreP2 * weight;
+
     if (logCallback) {
-      logCallback(`  ${scoringJudges[i].name}: P1=${scoringJudges[i].scoreP1} (×${weight}=${judgeScore1.toFixed(1)}) P2=${scoringJudges[i].scoreP2} (×${weight}=${judgeScore2.toFixed(1)})`);
+      logCallback(`  ${judgeFeedback.name}: P1=${judgeFeedback.scoreP1} (×${weight.toFixed(2)}=${judgeScore1.toFixed(1)}) P2=${judgeFeedback.scoreP2} (×${weight.toFixed(2)}=${judgeScore2.toFixed(1)})`);
     }
-    
+
     p1TotalScore += judgeScore1;
     p2TotalScore += judgeScore2;
-  }
+  });
 
   // Small bonus for using assigned rhyme words (encourages hitting targets)
   // But not enough to overcome poor length/quality
